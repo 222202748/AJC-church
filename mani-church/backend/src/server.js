@@ -10,7 +10,7 @@ const path = require('path');
 require('dotenv').config();
 
 // Import database configuration
-const { connectDB, setupConnectionEvents } = require('./config/database');
+const { connectDB, setupConnectionEvents, retryConnection } = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -20,8 +20,22 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Initialize database connection
-connectDB();
+// Initialize database connection with retry mechanism
+(async () => {
+  try {
+    // Use environment variables for retry configuration
+    const retryAttempts = process.env.MONGODB_RETRY_ATTEMPTS || 5;
+    const retryDelay = process.env.MONGODB_RETRY_DELAY || 2000;
+    
+    await retryConnection(retryAttempts, retryDelay);
+    console.log('✅ MongoDB connection established successfully');
+  } catch (error) {
+    console.error('❌ Failed to connect to MongoDB after multiple attempts:', error);
+    console.log('⚠️ Server will continue to run, but database operations may fail');
+  }
+})();
+
+// Setup MongoDB connection event handlers
 setupConnectionEvents();
 
 // Donation Schema

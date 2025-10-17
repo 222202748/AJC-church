@@ -26,6 +26,8 @@ import Greeting from './components/Greeting';
 import Testimonials from './components/Testimonials';
 import PrayerRequest from './components/PrayerRequest';
 import ServiceSchedule from './components/ServiceSchedule';
+import Sermons from './components/Sermons';
+import ProtectedRoute from './components/ProtectedRoute';
 
 
 
@@ -55,10 +57,11 @@ function App() {
           <Route path="/donate" element={<Donation />} />
           <Route path="/prayer-request" element={<PrayerRequest />} />
           <Route path="/service-schedule" element={<ServiceSchedule />} />
+          <Route path="/sermons" element={<Sermons />} />
           <Route path="/Admin" element={<Adminlogin />} />
-          <Route path="/Admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/Admin/blog" element={<BlogAdmin />} />
-          <Route path="/Admin/profile" element={<AdminProfile />} />
+          <Route path="/Admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/Admin/blog" element={<ProtectedRoute><BlogAdmin /></ProtectedRoute>} />
+          <Route path="/Admin/profile" element={<ProtectedRoute><AdminProfile /></ProtectedRoute>} />
           <Route path="/event-registration" element={<EventRegistration />} />
         </Routes>
         <Footer />

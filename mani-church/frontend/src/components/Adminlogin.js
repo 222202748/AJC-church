@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
+import axiosInstance from '../utils/axiosConfig';
 
 const AdminLogin = () => {
   const [username, setUsername] = useState('');
@@ -13,19 +14,14 @@ const AdminLogin = () => {
     setError('');
     
     try {
-      const response = await fetch(API_ENDPOINTS.admin + '/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
+      // Use the correct endpoint path with axiosInstance
+      // axiosInstance already prepends the base URL 'http://localhost:5000'
+      const response = await axiosInstance.post('/api/admin/login', { 
+        username, 
+        password 
       });
-
-      const data = await response.json();
       
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
+      const data = response.data;
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('userRole', data.role);

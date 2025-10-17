@@ -44,7 +44,8 @@ const PastorCard = ({ name, image, role, description, phone, whatsapp }) => {
       return image;
     }
 
-    return `/images/${image}`;
+    // Encode the image filename to handle spaces and special characters
+    return `/images/${encodeURIComponent(image)}`;
   };
 
   const pastorCardStyle = {
@@ -178,7 +179,7 @@ const Pastors = () => {
     {
       name: getTranslation(language, 'pastors.pastorName', 'SILUVAI RAJA'),
       role: getTranslation(language, 'pastors.pastorRole', 'Pastor'),
-      image: 'pastor img.jpg', // Ensure file is in /public/images/ and renamed correctly
+      image: 'pastor-img.jpg', // Using hyphen instead of space for better URL compatibility
       description: getTranslation(
         language,
         'pastors.pastorDescription',

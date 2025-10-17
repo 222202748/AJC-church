@@ -1,102 +1,533 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { translations } from '../translations';
+import { API_ENDPOINTS } from '../config/api';
+import axiosInstance from '../utils/axiosConfig';
 
-// import React from 'react';
-// import { useLanguage } from '../contexts/LanguageContext';
-// import { translations } from '../translations';
+const API_BASE_URL = 'http://localhost:5000';
 
-// const SermonCard = ({ title, category, time, pastor, image }) => {
-//   const { language } = useLanguage();
-//   const t = translations[language];
+const SermonCard = ({ title, category, time, pastor, videoUrl, audioUrl, thumbnail }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [mediaError, setMediaError] = useState(null);
+  const videoRef = useRef(null);
+  
+  const togglePlay = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    try {
+      // Clear any previous media errors when attempting to play
+      setMediaError(null);
+      
+      if (isPlaying) {
+        video.pause();
+        setIsPlaying(false);
+      } else {
+        // Check if video has sources
+        const sources = video.querySelectorAll('source');
+        if (sources.length === 0) {
+          throw new Error('No video sources available');
+        }
+        
+        // Check if at least one source exists on the server
+        let sourceExists = false;
+        for (const source of sources) {
+          try {
+            const response = await fetch(source.src, { method: 'HEAD' });
+            if (response.ok) {
+              sourceExists = true;
+              break;
+            }
+          } catch (e) {
+            console.warn(`Failed to check source: ${source.src}`, e);
+          }
+        }
+        
+        if (!sourceExists) {
+          throw new Error('Video files not found on server');
+        }
+        
+        // Ensure video is loaded before playing
+        if (video.readyState < 2) {
+          await new Promise((resolve, reject) => {
+            const onCanPlay = () => {
+              video.removeEventListener('canplay', onCanPlay);
+              video.removeEventListener('error', onError);
+              resolve();
+            };
+            const onError = (e) => {
+              video.removeEventListener('canplay', onCanPlay);
+              video.removeEventListener('error', onError);
+              
+              // Get more specific error information if possible
+              let errorMsg = 'Video failed to load';
+              if (e && e.target && e.target.error) {
+                const err = e.target.error;
+                switch (err.code) {
+                  case err.MEDIA_ERR_ABORTED:
+                    errorMsg = 'Video loading aborted';
+                    break;
+                  case err.MEDIA_ERR_NETWORK:
+                    errorMsg = 'Network error while loading video';
+                    break;
+                  case err.MEDIA_ERR_DECODE:
+                    errorMsg = 'Video decoding error';
+                    break;
+                  case err.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                    errorMsg = 'Video format not supported';
+                    break;
+                  default:
+                    errorMsg = err.message || 'Unknown video error';
+                }
+              }
+              
+              reject(new Error(errorMsg));
+            };
+            
+            video.addEventListener('canplay', onCanPlay);
+            video.addEventListener('error', onError);
+            video.load();
+          });
+        }
+        
+        await video.play();
+        setIsPlaying(true);
+      }
+    } catch (err) {
+      console.error('Error playing video:', err);
+      
+      // Provide more specific error messages based on the error
+      let errorMessage = 'Unable to play video';
+      if (err.name === 'NotAllowedError') {
+        errorMessage = 'Playback was prevented by your browser. Please try clicking the play button again.';
+      } else if (err.name === 'NotSupportedError') {
+        errorMessage = 'The video format is not supported by your browser.';
+      } else if (err.name === 'AbortError') {
+        errorMessage = 'The video playback was aborted.';
+      } else if (err.name === 'NetworkError') {
+        errorMessage = 'Network error: Unable to load video. Please check your connection.';
+      } else if (err.message) {
+        errorMessage = `Unable to play video: ${err.message}`;
+      }
+      
+      setMediaError(errorMessage);
+      setIsPlaying(false);
+    }
+  };
+  
+  const handleVideoEvents = {
+    onLoadStart: () => {
+      setMediaError(null);
+    },
+    onCanPlay: () => {
+      setMediaError(null);
+    },
+    onPlay: () => {
+      setIsPlaying(true);
+    },
+    onPause: () => {
+      setIsPlaying(false);
+    },
+    onEnded: () => {
+      setIsPlaying(false);
+    },
+    onError: (e) => {
+      console.error('Video error event:', e);
+      handleMediaError(e);
+    }
+  };
+  
+  const handleMediaError = (e) => {
+    console.error('Media error:', e);
+    
+    let errorMessage = 'Media playback error';
+    let detailedMessage = 'The media file could not be loaded';
+    
+    // Check if the media element has sources
+    const hasNoSources = e.target && e.target.querySelectorAll('source').length === 0;
+    const sourcesExist = e.target && e.target.querySelectorAll('source').length > 0;
+    const allSourcesFailed = sourcesExist && Array.from(e.target.querySelectorAll('source')).every(source => {
+      try {
+        // Try to fetch the source to check if it exists
+        const testFetch = new XMLHttpRequest();
+        testFetch.open('HEAD', source.src, false);
+        testFetch.send();
+        return testFetch.status >= 400; // Return true if file doesn't exist
+      } catch (err) {
+        return true; // Assume failure if we can't check
+      }
+    });
+    
+    if (hasNoSources) {
+      detailedMessage = 'No media sources provided';
+    } else if (allSourcesFailed) {
+      detailedMessage = 'Media file not found on server';
+    } else if (e.target && e.target.error) {
+      const error = e.target.error;
+      
+      switch (error.code) {
+        case error.MEDIA_ERR_ABORTED:
+          detailedMessage = 'Media loading was aborted';
+          break;
+        case error.MEDIA_ERR_NETWORK:
+          detailedMessage = 'Network error while loading media';
+          break;
+        case error.MEDIA_ERR_DECODE:
+          detailedMessage = 'Media decoding error - file may be corrupted';
+          break;
+        case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+          detailedMessage = 'Media format not supported or file not found';
+          break;
+        default:
+          detailedMessage = 'Unknown media error occurred';
+      }
+      
+      errorMessage = error.message || `Error code: ${error.code}`;
+    }
+    
+    console.error('Media error details:', errorMessage, detailedMessage);
+    setMediaError(`${detailedMessage}. Please try again or contact support.`);
+    setIsPlaying(false);
+  };
+  
+  const handleImageError = (e) => {
+    console.log('Failed to load image:', e.target.src);
+    // Set a fallback image
+    e.target.src = 'https://via.placeholder.com/600x400/8B4513/ffffff?text=No+Preview+Available';
+  };
 
-//   return (
-//     <div className="col-sm-12 col-md-6 col-lg-4 d-flex">
-//       <div className="card bg-dark text-white w-100">
-//         <img src={image} className="card-img img-fluid" alt={title} style={{ objectFit: 'cover', height: '200px' }} />
-//         <div className="card-img-overlay d-flex justify-content-center align-items-center">
-//           <button className="btn btn-light rounded-circle p-2">
-//             <i className="bi bi-play-fill fs-3"></i>
-//           </button>
-//         </div>
-//         <div className="card-body bg-white text-dark">
-//           <small className={`badge ${category.color} mb-2`}>{category.name}</small>
-//           <h5 className="card-title">{title}</h5>
-//           <p className="mb-1"><i className="bi bi-calendar"></i> {time}</p>
-//           <p><i className="bi bi-person"></i> {t.sermons.pastorLabel}: {pastor}</p>
-//           <div className="d-flex gap-3">
-//             <i className="bi bi-share"></i>
-//             <i className="bi bi-download"></i>
-//             <i className="bi bi-bookmark"></i>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
+  // Create proper video URL
+  const getVideoUrl = (url) => {
+    if (!url) return null;
+    
+    // If it's already a full URL, return as is
+    if (url.startsWith('http')) return url;
+    
+    // Clean up the URL path
+    let cleanUrl = url;
+    if (cleanUrl.startsWith('/api')) {
+      cleanUrl = cleanUrl.replace('/api', '');
+    }
+    if (!cleanUrl.startsWith('/')) {
+      cleanUrl = '/' + cleanUrl;
+    }
+    
+    return `${API_BASE_URL}${cleanUrl}`;
+  };
 
-// const Sermons = () => {
-//   const { language } = useLanguage();
-//   const t = translations[language];
+  // Create proper audio URL
+  const getAudioUrl = (url) => {
+    if (!url) return null;
+    
+    // If it's already a full URL, return as is
+    if (url.startsWith('http')) return url;
+    
+    // Clean up the URL path
+    let cleanUrl = url;
+    if (cleanUrl.startsWith('/api')) {
+      cleanUrl = cleanUrl.replace('/api', '');
+    }
+    if (!cleanUrl.startsWith('/')) {
+      cleanUrl = '/' + cleanUrl;
+    }
+    
+    return `${API_BASE_URL}${cleanUrl}`;
+  };
 
-//   const sermons = [
-//     {
-//       title: t.sermons.sermon1.title,
-//       category: { name: t.sermons.categories.theosis, color: 'bg-success' },
-//       time: t.sermons.timeSlot,
-//       pastor: t.sermons.pastors.darrell,
-//       image: 'https://via.placeholder.com/600x400?text=Sermon+1'
-//     },
-//     {
-//       title: t.sermons.sermon2.title,
-//       category: { name: t.sermons.categories.pneuma, color: 'bg-primary' },
-//       time: t.sermons.timeSlot,
-//       pastor: t.sermons.pastors.rick,
-//       image: 'https://via.placeholder.com/600x400?text=Sermon+2'
-//     },
-//     {
-//       title: t.sermons.sermon3.title,
-//       category: { name: t.sermons.categories.agape, color: 'bg-info text-dark' },
-//       time: t.sermons.timeSlot,
-//       pastor: t.sermons.pastors.darrell,
-//       image: 'https://via.placeholder.com/600x400?text=Sermon+3'
-//     }
-//   ];
+  const finalVideoUrl = getVideoUrl(videoUrl);
+  const finalAudioUrl = getAudioUrl(audioUrl);
 
-//   return (
-//     <section className="text-white py-5" style={{ background: 'linear-gradient(to right, #5d3a1a, #2d1b07)' }}>
-//       <div className="container">
-//         <div className="text-center mb-4">
-//           <h2>{t.sermons.todaySermon}</h2>
-//           <p>{t.sermons.description}</p>
-//         </div>
-//         <div className="row g-4">
-//           {sermons.map((sermon, index) => (
-//             <SermonCard key={index} {...sermon} />
-//           ))}
-//         </div>
-//         <div className="text-center mt-4">
-//           <a 
-//             href="/sermon-registration"
-//             className="btn btn-primary btn-lg px-4 py-2 rounded-pill fw-bold text-uppercase"
-//             style={{
-//               background: 'linear-gradient(45deg, #5d3a1a, #2d1b07)',
-//               border: 'none',
-//               boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-//               transition: 'transform 0.3s ease, box-shadow 0.3s ease'
-//             }}
-//             onMouseOver={(e) => {
-//               e.currentTarget.style.transform = 'translateY(-2px)';
-//               e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
-//             }}
-//             onMouseOut={(e) => {
-//               e.currentTarget.style.transform = 'translateY(0)';
-//               e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
-//             }}
-//           >
-//             {t.sermons.registerButton}
-//           </a>
-//         </div>
-//       </div>
-//     </section>
-//   );
-// };
+  return (
+    <div className="col-sm-12 col-md-6 col-lg-4 d-flex">
+      <div className="card bg-dark text-white w-100">
+        <div className="position-relative" style={{ height: '200px' }}>
+          {finalVideoUrl ? (
+            <>
+              <video 
+                ref={videoRef}
+                className="card-img img-fluid w-100 h-100" 
+                style={{ objectFit: 'cover' }} 
+                poster={thumbnail || ''}
+                {...handleVideoEvents}
+                preload="metadata"
+                playsInline
+                controls={false}
+              >
+                <source src={finalVideoUrl} type="video/mp4" />
+                {/* Try alternative formats if available */}
+                <source src={finalVideoUrl.replace('.mp4', '.webm')} type="video/webm" />
+                <source src={finalVideoUrl.replace('.mp4', '.ogg')} type="video/ogg" />
+                Your browser does not support the video element.
+              </video>
+              
+              {/* Play/Pause Button Overlay */}
+              <div className="card-img-overlay d-flex justify-content-center align-items-center">
+                <button 
+                  className="btn btn-light rounded-circle p-3" 
+                  onClick={togglePlay}
+                  disabled={!!mediaError}
+                  style={{ 
+                    opacity: 0.9,
+                    transition: 'opacity 0.3s ease',
+                    fontSize: '1.5rem'
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '1'}
+                  onMouseLeave={(e) => e.target.style.opacity = '0.9'}
+                >
+                  <i className={`bi ${isPlaying ? 'bi-pause-fill' : 'bi-play-fill'}`}></i>
+                </button>
+              </div>
+              
+              {/* Error Display */}
+              {mediaError && (
+                <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center bg-dark bg-opacity-75">
+                  <div className="text-center text-white p-3">
+                    <i className="bi bi-exclamation-triangle fs-1 mb-3 text-warning"></i>
+                    <p className="mb-2 fw-bold">Video Error</p>
+                    <p className="small">{mediaError}</p>
+                    <button 
+                      className="btn btn-outline-light btn-sm mt-2"
+                      onClick={() => {
+                        setMediaError(null);
+                        if (videoRef.current) {
+                          videoRef.current.load();
+                        }
+                      }}
+                    >
+                      <i className="bi bi-arrow-clockwise me-1"></i>
+                      Retry
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <img 
+                src={thumbnail || 'https://via.placeholder.com/600x400/8B4513/ffffff?text=No+Preview+Available'} 
+                className="card-img img-fluid w-100 h-100" 
+                alt={title} 
+                style={{ objectFit: 'cover' }}
+                onError={handleImageError}
+              />
+              <div className="card-img-overlay d-flex justify-content-center align-items-center">
+                <div className="btn btn-light rounded-circle p-3 disabled opacity-50">
+                  <i className="bi bi-play-fill"></i>
+                </div>
+                <div className="position-absolute bottom-0 start-0 w-100 p-2 bg-dark bg-opacity-50">
+                  <small className="text-white">
+                    <i className="bi bi-info-circle me-1"></i>
+                    Video not available
+                  </small>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+        
+        <div className="card-body bg-white text-dark">
+          <small className={`badge ${category.color} mb-2`}>{category.name}</small>
+          <h5 className="card-title">{title}</h5>
+          <p className="mb-1"><i className="bi bi-calendar me-1"></i> {time}</p>
+          <p className="mb-3"><i className="bi bi-person me-1"></i> {pastor}</p>
+          
+          {/* Audio Player Section */}
+          {finalAudioUrl && (
+            <div className="mb-3">
+              <label className="form-label small">
+                <i className="bi bi-music-note me-1"></i> Audio Sermon:
+              </label>
+              <audio 
+                controls 
+                className="w-100" 
+                onError={handleMediaError}
+                style={{ height: '40px' }}
+                preload="metadata"
+              >
+                <source src={finalAudioUrl} type="audio/mpeg" />
+                <source src={finalAudioUrl.replace('.mp3', '.ogg')} type="audio/ogg" />
+                <source src={finalAudioUrl.replace('.mp3', '.wav')} type="audio/wav" />
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+          )}
+          
+          <div className="d-flex gap-3">
+            <button className="btn btn-link p-0 text-muted" title="Share">
+              <i className="bi bi-share"></i>
+            </button>
+            <button className="btn btn-link p-0 text-muted" title="Download">
+              <i className="bi bi-download"></i>
+            </button>
+            <button className="btn btn-link p-0 text-muted" title="Bookmark">
+              <i className="bi bi-bookmark"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-// export default Sermons;
+const Sermons = () => {
+  const { language } = useLanguage();
+  const [sermons, setSermons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Fetch videos from the backend
+  useEffect(() => {
+    const fetchSermons = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Try to fetch videos from the backend using axios instance
+        const response = await axiosInstance.get('/api/upload/videos/list');
+        
+        if (response.status === 200 && response.data) {
+          const data = response.data;
+          
+          // Map videos to sermon format
+          if (data.videos && Array.isArray(data.videos) && data.videos.length > 0) {
+            const mappedSermons = data.videos.map((video, index) => ({
+              id: video.id || index,
+              title: video.title || video.filename?.split('.')[0]?.replace(/_/g, ' ') || `Sermon ${index + 1}`,
+              category: { name: video.category || "Sermon", color: 'bg-success' },
+              time: video.date || (video.createdAt ? new Date(video.createdAt).toLocaleDateString() : 'Recent'),
+              pastor: video.pastor || "Pastor SILUVAI RAJA",
+              videoUrl: video.url || video.videoUrl || null,
+              audioUrl: video.audioUrl || null,
+              thumbnail: video.thumbnail || null
+            }));
+            setSermons(mappedSermons);
+          } else {
+            console.log('No videos found in response, using default sermons');
+            setSermons(getDefaultSermons());
+          }
+        } else {
+          console.log('Invalid response, using default sermons');
+          setSermons(getDefaultSermons());
+        }
+      } catch (err) {
+        console.error('Error fetching sermons:', err);
+        
+        // Provide more specific error messages
+        let errorMessage = 'Failed to load sermons';
+        if (err.code === 'NETWORK_ERROR') {
+          errorMessage = 'Network error: Please check your internet connection';
+        } else if (err.response?.status === 404) {
+          errorMessage = 'Sermon service not available';
+        } else if (err.response?.status === 500) {
+          errorMessage = 'Server error: Please try again later';
+        }
+        
+        setError(errorMessage);
+        setSermons(getDefaultSermons());
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchSermons();
+  }, []);
+  
+  // Default sermons data if API fails
+  const getDefaultSermons = () => [
+    {
+      id: 1,
+      title: "Finding Strength in God's Promises",
+      category: { name: "Faith", color: 'bg-success' },
+      time: "Sunday, 10:00 AM",
+      pastor: "Pastor SILUVAI RAJA",
+      thumbnail: 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTB8fGNodXJjaHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=600&q=60',
+      videoUrl: '/videos/sermon1.mp4', // Sample video URL
+      audioUrl: '/audio/sermon1.mp3'  // Sample audio URL
+    },
+    {
+      id: 2,
+      title: "Insights of Faith: Finding Peace in Uncertain Times",
+      category: { name: "Peace", color: 'bg-primary' },
+      time: "Sunday, 6:00 PM",
+      pastor: "Pastor SILUVAI RAJA",
+      thumbnail: 'https://images.unsplash.com/photo-1601455763557-db1bea8a9a5b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fGNodXJjaHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=600&q=60',
+      videoUrl: '/videos/sermon2.mp4',
+      audioUrl: '/audio/sermon2.mp3'
+    },
+    {
+      id: 3,
+      title: "Walking in Faith: Believing Beyond What You See",
+      category: { name: "Belief", color: 'bg-info text-dark' },
+      time: "Wednesday, 7:00 PM",
+      pastor: "Pastor SILUVAI RAJA",
+      thumbnail: 'https://images.unsplash.com/photo-1548625361-1adcab316530?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTV8fGNodXJjaHxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=600&q=60',
+      videoUrl: '/videos/sermon3.mp4',
+      audioUrl: '/audio/sermon3.mp3'
+    }
+  ];
+
+  return (
+    <>
+      <div className="py-5 bg-light">
+        <div className="container text-center">
+          <h1 className="display-4 mb-4" style={{ color: '#8B4513' }}>Our Sermons</h1>
+          <p className="lead mb-5">Join us for inspiring messages that will strengthen your faith and bring you closer to God.</p>
+        </div>
+      </div>
+      
+      <section className="text-white py-5" style={{ background: 'linear-gradient(to right, #8B4513, #A0522D)' }}>
+        <div className="container">
+          <div className="text-center mb-4">
+            <h2>{language === 'tamil' ? 'இன்றைய பிரசங்கம்' : 'Today\'s Sermon'}</h2>
+            <p>{language === 'tamil' ? 'கடவுளின் வார்த்தையை கேட்டு உங்கள் ஆன்மீக பயணத்தை மேம்படுத்துங்கள்' : 'Enhance your spiritual journey by listening to the Word of God'}</p>
+          </div>
+          
+          {loading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-light mb-3" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <p className="mt-3">Loading sermons...</p>
+            </div>
+          ) : error ? (
+            <div className="alert alert-warning text-center">
+              <i className="bi bi-exclamation-triangle me-2"></i>
+              {error}
+            </div>
+          ) : (
+            <div className="row g-4">
+              {sermons.map((sermon) => (
+                <SermonCard key={sermon.id || sermon.title} {...sermon} />
+              ))}
+            </div>
+          )}
+          
+          <div className="text-center mt-5">
+            <a 
+              href="/event-registration"
+              className="btn btn-primary btn-lg px-4 py-2 rounded-pill fw-bold text-uppercase"
+              style={{
+                background: 'linear-gradient(45deg, #4CAF50, #45a049)',
+                border: 'none',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                transition: 'transform 0.3s ease, box-shadow 0.3s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+              }}
+            >
+              {language === 'tamil' ? 'இப்போது பதிவு செய்யவும்' : 'Register Now'}
+            </a>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+};
+
+export default Sermons;

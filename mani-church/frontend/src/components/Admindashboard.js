@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Calendar, Mail, Phone, MapPin, Download, Search, Filter, Eye, Trash2, RefreshCw, UserPlus, DollarSign, BarChart3, FileText } from 'lucide-react';
-import { API_ENDPOINTS, getAuthHeader } from '../config/api';
+import { Users, Calendar, Mail, Phone, MapPin, Download, Search, Filter, Eye, Trash2, RefreshCw, UserPlus, DollarSign, BarChart3, FileText, Video } from 'lucide-react';
+import { API_ENDPOINTS } from '../config/api';
+import axiosInstance from '../utils/axiosConfig';
 import DonationDashboard from './DonationDashboard';
 import { useNavigate } from 'react-router-dom';
+import SermonVideoUpload from './SermonVideoUpload';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -24,19 +26,8 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(API_ENDPOINTS.EVENT_REGISTRATIONS, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeader()
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const response = await axiosInstance.get(API_ENDPOINTS.EVENT_REGISTRATIONS);
+      const data = response.data;
       setRegistrations(data);
       setFilteredRegistrations(data);
     } catch (error) {
@@ -120,17 +111,7 @@ const AdminDashboard = () => {
   const handleDeleteRegistration = async (id) => {
     if (window.confirm('Are you sure you want to delete this registration?')) {
       try {
-        const response = await fetch(`${API_ENDPOINTS.EVENT_REGISTRATIONS}/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeader()
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        await axiosInstance.delete(`${API_ENDPOINTS.EVENT_REGISTRATIONS}/${id}`);
 
         // Remove the deleted registration from the state
         setRegistrations(prev => prev.filter(reg => reg._id !== id));
@@ -485,7 +466,7 @@ const AdminDashboard = () => {
         {/* Tab Navigation */}
         <div className="bg-white rounded-lg shadow-md mb-6">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
+            <nav className="-mb-px flex space-x-8 px-6 overflow-x-auto">
               <button
                 onClick={() => setActiveTab('events')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -513,6 +494,19 @@ const AdminDashboard = () => {
                 </div>
               </button>
               <button
+                onClick={() => setActiveTab('sermons')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'sermons'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <Video className="w-4 h-4" />
+                  <span>Sermon Videos</span>
+                </div>
+              </button>
+              <button
                 onClick={() => navigate('/Admin/blog')}
                 className="py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               >
@@ -537,6 +531,7 @@ const AdminDashboard = () => {
         {/* Tab Content */}
         {activeTab === 'events' && <EventRegistrationDashboard />}
         {activeTab === 'donations' && <DonationDashboard />}
+        {activeTab === 'sermons' && <SermonVideoUpload />}
       </div>
     </div>
   );
