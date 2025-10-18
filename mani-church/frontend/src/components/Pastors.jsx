@@ -134,38 +134,8 @@ const PastorCard = ({ name, image, role, description, phone, whatsapp }) => {
             </a>
           </div>
 
-          {/* Social Media Icons */}
-          <div className="social-icons">
-            {[
-              ['facebook', 'Facebook'],
-              ['twitter', 'Twitter'],
-              ['instagram', 'Instagram'],
-              ['telegram', 'Telegram']
-            ].map(([platform, label], index) => (
-              <a
-                key={index}
-                href={`https://${platform}.com/awakenur`}
-                className={`text-dark ${index < 3 ? 'me-3' : ''} fs-5 social-link`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={label}
-                style={{
-                  transition: 'all 0.3s ease',
-                  textDecoration: 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#8B4513';
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >
-                <i className={`bi bi-${platform}`}></i>
-              </a>
-            ))}
-          </div>
+          {/* Social Media Icons (removed as requested) */}
+          <div className="social-icons"></div>
         </div>
       </div>
     </div>

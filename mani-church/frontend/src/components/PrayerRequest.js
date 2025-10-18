@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Send, Check } from 'lucide-react';
+import { Send, Check, Bell } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { API_ENDPOINTS } from '../config/api';
+import axios from 'axios';
 
 const PrayerRequest = () => {
   const { language } = useLanguage();
@@ -40,7 +42,8 @@ const PrayerRequest = () => {
       submittingButton: 'Submitting...',
       successMessage: 'Your prayer request has been submitted. Our prayer team will be praying for you.',
       errorMessage: 'There was an error submitting your request. Please try again.',
-      requiredField: 'This field is required'
+      requiredField: 'This field is required',
+      notificationSent: 'Admin has been notified of your prayer request.'
     },
     ta: {
       title: 'ஜெப வேண்டுகோள்',
@@ -64,7 +67,8 @@ const PrayerRequest = () => {
       submittingButton: 'சமர்ப்பிக்கிறது...',
       successMessage: 'உங்கள் ஜெப வேண்டுகோள் சமர்ப்பிக்கப்பட்டது. எங்கள் ஜெபக் குழு உங்களுக்காக ஜெபிக்கும்.',
       errorMessage: 'உங்கள் வேண்டுகோளைச் சமர்ப்பிப்பதில் பிழை ஏற்பட்டது. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.',
-      requiredField: 'இந்த புலம் தேவை'
+      requiredField: 'இந்த புலம் தேவை',
+      notificationSent: 'நிர்வாகிக்கு உங்கள் ஜெப வேண்டுகோள் பற்றி அறிவிக்கப்பட்டுள்ளது.'
     }
   };
   
@@ -76,6 +80,30 @@ const PrayerRequest = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+  };
+  
+  // Function to send notification to admin
+  const notifyAdmin = async (requestData) => {
+    try {
+      // Use the admin endpoint to send notification
+      await axios.post(`${API_ENDPOINTS.admin}/notifications`, {
+        type: 'prayer_request',
+        message: `New prayer request from ${requestData.name}`,
+        details: {
+          name: requestData.name,
+          email: requestData.email,
+          requestType: requestData.requestType,
+          isConfidential: requestData.isConfidential,
+          timestamp: new Date().toISOString()
+        },
+        priority: 'high'
+      });
+      console.log('Admin notification sent successfully');
+      return true;
+    } catch (error) {
+      console.error('Failed to send admin notification:', error);
+      return false;
+    }
   };
   
   const handleSubmit = async (e) => {
@@ -90,17 +118,19 @@ const PrayerRequest = () => {
     
     setIsSubmitting(true);
     
-    // Simulate API call
     try {
       // In a real application, you would send this data to your backend
-      // await fetch('/api/prayer-requests', {
+      // const response = await fetch('/api/prayer-requests', {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify(formData)
       // });
       
       // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Send notification to admin
+      await notifyAdmin(formData);
       
       setSubmitted(true);
       setFormData({
@@ -138,7 +168,11 @@ const PrayerRequest = () => {
               <Check className="w-8 h-8 text-green-600" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">{t.title}</h3>
-            <p className="text-gray-600 mb-6">{t.successMessage}</p>
+            <p className="text-gray-600 mb-4">{t.successMessage}</p>
+            <div className="flex items-center justify-center text-blue-600 mb-6">
+              <Bell className="w-4 h-4 mr-2" />
+              <p className="text-sm">{t.notificationSent}</p>
+            </div>
             <button
               onClick={resetForm}
               className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"

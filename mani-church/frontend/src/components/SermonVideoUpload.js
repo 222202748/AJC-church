@@ -25,7 +25,7 @@ const SermonVideoUpload = () => {
       setLoading(true);
       setError(null);
       
-      const response = await axiosInstance.get('/api/upload/videos/list');
+      const response = await axiosInstance.get('http://localhost:5000/api/upload/videos/list');
 
       const data = response.data;
       console.log('Fetched videos data:', data);
@@ -88,18 +88,28 @@ const SermonVideoUpload = () => {
     try {
       console.log('Uploading videos...');
       
-      const response = await axiosInstance.post('/api/upload/videos', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`Upload progress: ${percentCompleted}%`);
-        }
+      // Try direct fetch instead of using axiosInstance
+      const token = localStorage.getItem('token');
+      const headers = new Headers();
+      if (token) {
+        headers.append('Authorization', `Bearer ${token}`);
+      }
+      
+      console.log('Sending to backend URL:', 'http://localhost:5000/api/upload/videos');
+      
+      const response = await fetch('http://localhost:5000/api/upload/videos', {
+        method: 'POST',
+        headers: headers,
+        body: formData
       });
       
-      console.log('Upload response:', response);
-      const result = response.data;
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Server error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, Details: ${errorText}`);
+      }
+      
+      const result = await response.json();
       console.log('Upload success data:', result);
       
       // Clear selected files after successful upload
@@ -112,8 +122,8 @@ const SermonVideoUpload = () => {
       // Refresh the sermon videos list
       fetchSermonVideos();
     } catch (error) {
-      console.error('Upload error:', error);
-      alert(`Upload failed: ${error.message}`);
+      console.error('Upload error details:', error);
+      alert(`Upload failed: ${error.message}. Check console for details.`);
     } finally {
       setUploading(false);
     }
@@ -122,7 +132,7 @@ const SermonVideoUpload = () => {
   const deleteVideo = async (filename) => {
     if (window.confirm(`Are you sure you want to delete the sermon video "${filename}"?`)) {
       try {
-        await axiosInstance.delete(`/api/upload/video/${filename}`);
+        await axiosInstance.delete(`http://localhost:5000/api/upload/video/${encodeURIComponent(filename)}`);
 
         alert('Sermon video deleted successfully!');
         fetchSermonVideos();
@@ -315,7 +325,7 @@ const SermonVideoUpload = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="w-24 h-16 bg-gray-100 rounded overflow-hidden">
                         <video 
-                           src={`${API_BASE_URL}${video.url.replace('/api', '')}`} 
+                           src={`${API_BASE_URL}${video.url}`} 
                            className="w-full h-full object-cover"
                           />
                       </div>
@@ -332,7 +342,7 @@ const SermonVideoUpload = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <a 
-                           href={`${API_BASE_URL}${video.url.replace('/api', '')}`} 
+                           href={`${API_BASE_URL}${video.url}`} 
                            target="_blank" 
                            rel="noopener noreferrer"
                           className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-100"

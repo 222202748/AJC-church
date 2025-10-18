@@ -1,9 +1,6 @@
 import { refreshToken, logout, isTokenValid } from './authUtils';
 import { getAuthHeader } from '../config/api';
 
-// Remove the trailing slash to avoid double slashes when concatenating
-const API_BASE_URL = 'http://localhost:5000';
-
 // Custom fetch wrapper with similar API to axios
 const fetchWrapper = {
   // GET request
@@ -19,7 +16,8 @@ const fetchWrapper = {
         }
       }
       
-      const response = await fetch(`${API_BASE_URL}${url}`, {
+      // Use the full URL as provided from API_ENDPOINTS
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -69,7 +67,8 @@ const fetchWrapper = {
       
       const isFormData = body instanceof FormData;
       
-      const response = await fetch(`${API_BASE_URL}${url}`, {
+      // Use the full URL as provided from API_ENDPOINTS
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           ...(!isFormData && { 'Content-Type': 'application/json' }),
@@ -118,7 +117,7 @@ const fetchWrapper = {
         }
       }
       
-      const response = await fetch(`${API_BASE_URL}${url}`, {
+      const response = await fetch(url, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

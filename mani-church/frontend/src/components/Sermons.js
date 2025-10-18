@@ -90,6 +90,23 @@ const SermonCard = ({ title, category, time, pastor, videoUrl, audioUrl, thumbna
           });
         }
         
+        // Request fullscreen before playing
+        const requestFs = async (el) => {
+          if (el.requestFullscreen) return el.requestFullscreen();
+          if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+          if (el.msRequestFullscreen) return el.msRequestFullscreen();
+          // Fallback to parent element if available
+          if (el.parentElement && el.parentElement.requestFullscreen) {
+            return el.parentElement.requestFullscreen();
+          }
+          return Promise.resolve();
+        };
+        try {
+          await requestFs(video);
+        } catch (fsErr) {
+          console.warn('Fullscreen request failed:', fsErr);
+        }
+        
         await video.play();
         setIsPlaying(true);
       }
@@ -205,9 +222,7 @@ const SermonCard = ({ title, category, time, pastor, videoUrl, audioUrl, thumbna
     
     // Clean up the URL path
     let cleanUrl = url;
-    if (cleanUrl.startsWith('/api')) {
-      cleanUrl = cleanUrl.replace('/api', '');
-    }
+    // Keep '/api' prefix intact to match backend routes
     if (!cleanUrl.startsWith('/')) {
       cleanUrl = '/' + cleanUrl;
     }
@@ -224,9 +239,7 @@ const SermonCard = ({ title, category, time, pastor, videoUrl, audioUrl, thumbna
     
     // Clean up the URL path
     let cleanUrl = url;
-    if (cleanUrl.startsWith('/api')) {
-      cleanUrl = cleanUrl.replace('/api', '');
-    }
+    // Keep '/api' prefix intact to match backend routes
     if (!cleanUrl.startsWith('/')) {
       cleanUrl = '/' + cleanUrl;
     }
@@ -251,7 +264,7 @@ const SermonCard = ({ title, category, time, pastor, videoUrl, audioUrl, thumbna
                 {...handleVideoEvents}
                 preload="metadata"
                 playsInline
-                controls={false}
+                controls={isPlaying}
               >
                 <source src={finalVideoUrl} type="video/mp4" />
                 {/* Try alternative formats if available */}
@@ -260,23 +273,25 @@ const SermonCard = ({ title, category, time, pastor, videoUrl, audioUrl, thumbna
                 Your browser does not support the video element.
               </video>
               
-              {/* Play/Pause Button Overlay */}
-              <div className="card-img-overlay d-flex justify-content-center align-items-center">
-                <button 
-                  className="btn btn-light rounded-circle p-3" 
-                  onClick={togglePlay}
-                  disabled={!!mediaError}
-                  style={{ 
-                    opacity: 0.9,
-                    transition: 'opacity 0.3s ease',
-                    fontSize: '1.5rem'
-                  }}
-                  onMouseEnter={(e) => e.target.style.opacity = '1'}
-                  onMouseLeave={(e) => e.target.style.opacity = '0.9'}
-                >
-                  <i className={`bi ${isPlaying ? 'bi-pause-fill' : 'bi-play-fill'}`}></i>
-                </button>
-              </div>
+              {/* Play Button Overlay - hidden while playing */}
+              {!isPlaying && !mediaError && (
+                <div className="card-img-overlay d-flex justify-content-center align-items-center">
+                  <button 
+                    className="btn btn-light rounded-circle p-3" 
+                    onClick={togglePlay}
+                    style={{ 
+                      opacity: 0.9,
+                      transition: 'opacity 0.3s ease',
+                      fontSize: '1.5rem'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.9'}
+                  >
+                    <i className="bi bi-play-fill"></i>
+                  </button>
+                </div>
+              )}
+              {/* Play/Pause Button Overlay removed; overlay handled conditionally above */}
               
               {/* Error Display */}
               {mediaError && (
