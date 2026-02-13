@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, User, Clock, Share2, Heart, MessageCircle, Phone, Upload, Edit, Trash2, Plus, Download, Search, Filter, RefreshCw, Eye, FileText, Video, Image } from 'lucide-react';
+import { Calendar, User, Share2, Heart, MessageCircle, Edit, Trash2, Plus, Download, Search, Filter, RefreshCw, Eye, FileText, Video, Tag } from 'lucide-react';
 import { API_ENDPOINTS, getAuthHeader } from '../config/api';
 
 const BlogAdmin = () => {

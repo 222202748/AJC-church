@@ -2,11 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, User, ArrowRight } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
+import { useLanguage } from '../contexts/LanguageContext';
+import { translations } from '../translations';
 
 const HomeBlogPreview = () => {
+  const { language } = useLanguage();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const getTranslation = (key, fallback) => {
+    try {
+      const keys = key.split('.');
+      let result = translations[language] || translations.english;
+      for (const k of keys) {
+        if (result && typeof result === 'object' && k in result) {
+          result = result[k];
+        } else {
+          return fallback;
+        }
+      }
+      return result || fallback;
+    } catch (error) {
+      return fallback;
+    }
+  };
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -38,16 +58,19 @@ const HomeBlogPreview = () => {
   // Format date for display
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('en-US', options);
+    const locale = language === 'tamil' ? 'ta-IN' : 'en-US';
+    return new Date(dateString).toLocaleDateString(locale, options);
   };
 
   return (
     <section className="py-12 bg-gray-50">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Latest Articles</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            {getTranslation('blog.latestArticles', 'Latest Articles')}
+          </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Stay updated with our latest sermons, testimonies, and church announcements
+            {getTranslation('blog.subscribeText', 'Stay updated with our latest sermons, testimonies, and church announcements')}
           </p>
         </div>
 
@@ -61,7 +84,7 @@ const HomeBlogPreview = () => {
           </div>
         ) : articles.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
-            <p>No articles available at the moment.</p>
+            <p>{getTranslation('noResults', 'No articles available at the moment.')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -92,7 +115,7 @@ const HomeBlogPreview = () => {
                     to={`/blog/${article._id}`} 
                     className="inline-flex items-center text-blue-600 hover:text-blue-800"
                   >
-                    Read More <ArrowRight className="w-4 h-4 ml-1" />
+                    {getTranslation('readMore', 'Read More')} <ArrowRight className="w-4 h-4 ml-1" />
                   </Link>
                 </div>
               </div>
@@ -105,7 +128,7 @@ const HomeBlogPreview = () => {
             to="/blog" 
             className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
-            View All Articles
+            {getTranslation('blog.viewAll', 'View All Articles')}
           </Link>
         </div>
       </div>

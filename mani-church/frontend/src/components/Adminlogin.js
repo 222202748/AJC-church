@@ -16,10 +16,10 @@ const AdminLogin = () => {
     try {
       // Use the correct endpoint path with axiosInstance
       // axiosInstance already prepends the base URL 'http://localhost:5000'
-      const response = await axiosInstance.post('/api/admin/login', { 
+      const response = await axiosInstance.post(`${API_ENDPOINTS.admin}/login`, { 
         username, 
         password 
-      });
+      }, { requiresAuth: false });
       
       const data = response.data;
 

@@ -129,12 +129,37 @@ const AdminDashboard = () => {
   };
 
   const totalRegistrations = registrations.length;
-  const confirmedCount = registrations.filter(r => r.status === 'confirmed').length;
-  const pendingCount = registrations.filter(r => r.status === 'pending').length;
+  const confirmedCount = registrations.filter(r => (r.status === 'confirmed' || r.confirmed)).length;
   const cancelledCount = registrations.filter(r => r.status === 'cancelled').length;
   const totalAttendees = registrations
-    .filter(r => r.status === 'confirmed')
+    .filter(r => (r.status === 'confirmed' || r.confirmed))
     .reduce((sum, reg) => sum + (reg.attendeeCount || 1), 0);
+
+  const attendedAttendees = registrations
+    .filter(r => r.attended)
+    .reduce((sum, reg) => sum + (reg.attendeeCount || 1), 0);
+
+  const handleConfirm = async (id) => {
+    try {
+      const res = await axiosInstance.patch(`${API_ENDPOINTS.EVENT_REGISTRATIONS}/${id}/confirm`, {}, { requiresAuth: false });
+      const updated = res.data;
+      setRegistrations(prev => prev.map(r => (r._id === id || r.id === id) ? updated : r));
+      setFilteredRegistrations(prev => prev.map(r => (r._id === id || r.id === id) ? updated : r));
+    } catch (e) {
+      alert('Failed to confirm registration');
+    }
+  };
+
+  const handleMarkAttended = async (id) => {
+    try {
+      const res = await axiosInstance.patch(`${API_ENDPOINTS.EVENT_REGISTRATIONS}/${id}/attend`, {}, { requiresAuth: false });
+      const updated = res.data;
+      setRegistrations(prev => prev.map(r => (r._id === id || r.id === id) ? updated : r));
+      setFilteredRegistrations(prev => prev.map(r => (r._id === id || r.id === id) ? updated : r));
+    } catch (e) {
+      alert('Failed to mark attendance');
+    }
+  };
 
   const EventRegistrationDashboard = () => (
     <div>
@@ -227,6 +252,19 @@ const AdminDashboard = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Cancelled</p>
               <p className="text-2xl font-bold text-red-600">{cancelledCount}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Users className="w-8 h-8 text-indigo-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Attended</p>
+              <p className="text-xs text-gray-500">People</p>
+              <p className="text-xl font-bold text-indigo-600">{attendedAttendees}</p>
             </div>
           </div>
         </div>
@@ -363,6 +401,20 @@ const AdminDashboard = () => {
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleConfirm(registration._id || registration.id)}
+                          className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-100"
+                          title="Confirm"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => handleMarkAttended(registration._id || registration.id)}
+                          className="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-100"
+                          title="Mark Attended"
+                        >
+                          ✔
                         </button>
                         <button
                           onClick={() => handleDeleteRegistration(registration._id || registration.id)}

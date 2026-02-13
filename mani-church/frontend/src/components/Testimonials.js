@@ -1,30 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { Quote, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { translations } from '../translations';
 
 const Testimonials = () => {
+  const { language } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   
+  const getTranslation = (key, fallback) => {
+    try {
+      const keys = key.split('.');
+      let result = translations[language] || translations.english;
+      for (const k of keys) {
+        if (result && typeof result === 'object' && k in result) {
+          result = result[k];
+        } else {
+          return fallback;
+        }
+      }
+      return result || fallback;
+    } catch (error) {
+      return fallback;
+    }
+  };
+
   const testimonials = [
     {
       id: 1,
-      name: 'Sarah Thomas',
-      role: 'Church Member',
-      quote: 'This church has been a blessing to my family. The community is welcoming and the sermons are inspiring.',
+      name: getTranslation('testimonials.sarahName', 'Sarah Thomas'),
+      role: getTranslation('testimonials.sarahRole', 'Church Member'),
+      quote: getTranslation('testimonials.sarahQuote', 'This church has been a blessing to my family. The community is welcoming and the sermons are inspiring.'),
       image: 'https://randomuser.me/api/portraits/women/32.jpg'
     },
     {
       id: 2,
-      name: 'John Davis',
-      role: 'Youth Group Leader',
-      quote: 'I\'ve seen so many young lives transformed through our youth ministry. God is truly working in this place.',
+      name: getTranslation('testimonials.johnName', 'John Davis'),
+      role: getTranslation('testimonials.johnRole', 'Youth Group Leader'),
+      quote: getTranslation('testimonials.johnQuote', 'I\'ve seen so many young lives transformed through our youth ministry. God is truly working in this place.'),
       image: 'https://randomuser.me/api/portraits/men/41.jpg'
     },
     {
       id: 3,
-      name: 'Mary Johnson',
-      role: 'Choir Member',
-      quote: 'The worship experience here is amazing. I feel God\'s presence every time we gather together.',
+      name: getTranslation('testimonials.maryName', 'Mary Johnson'),
+      role: getTranslation('testimonials.maryRole', 'Choir Member'),
+      quote: getTranslation('testimonials.maryQuote', 'The worship experience here is amazing. I feel God\'s presence every time we gather together.'),
       image: 'https://randomuser.me/api/portraits/women/68.jpg'
     },
   ];
@@ -57,12 +77,14 @@ const Testimonials = () => {
     }, 8000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [testimonials.length]);
   
   return (
     <div className="bg-amber-700 py-16 px-4 sm:px-6 lg:px-8 my-12">
       <div className="max-w-4xl mx-auto">
-        <h2 className="text-3xl font-bold text-center text-white mb-12">Testimonials</h2>
+        <h2 className="text-3xl font-bold text-center text-white mb-12">
+          {getTranslation('testimonials.title', 'Testimonials')}
+        </h2>
         
         <div className="relative">
           <div className="flex justify-between absolute top-1/2 transform -translate-y-1/2 w-full px-4 z-10">

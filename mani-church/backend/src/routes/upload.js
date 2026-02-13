@@ -149,8 +149,8 @@ router.delete('/video/:filename', authenticateAdmin, async (req, res) => {
   }
 });
 
-// List all uploaded videos (admin only)
-router.get('/videos/list', authenticateAdmin, async (req, res) => {
+// List all uploaded videos (public)
+router.get('/videos/list', async (req, res) => {
   try {
     const videosDir = path.join(__dirname, '../../uploads/videos');
     

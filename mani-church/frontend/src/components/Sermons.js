@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { translations } from '../translations';
-import { API_ENDPOINTS } from '../config/api';
 import axiosInstance from '../utils/axiosConfig';
 
 const API_BASE_URL = 'http://localhost:5000';
@@ -9,6 +7,7 @@ const API_BASE_URL = 'http://localhost:5000';
 const SermonCard = ({ title, category, time, pastor, videoUrl, audioUrl, thumbnail }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [mediaError, setMediaError] = useState(null);
+  const [isSaved, setIsSaved] = useState(false);
   const videoRef = useRef(null);
   
   const togglePlay = async () => {
@@ -213,42 +212,77 @@ const SermonCard = ({ title, category, time, pastor, videoUrl, audioUrl, thumbna
     e.target.src = 'https://via.placeholder.com/600x400/8B4513/ffffff?text=No+Preview+Available';
   };
 
-  // Create proper video URL
   const getVideoUrl = (url) => {
     if (!url) return null;
-    
-    // If it's already a full URL, return as is
     if (url.startsWith('http')) return url;
-    
-    // Clean up the URL path
-    let cleanUrl = url;
-    // Keep '/api' prefix intact to match backend routes
-    if (!cleanUrl.startsWith('/')) {
-      cleanUrl = '/' + cleanUrl;
-    }
-    
-    return `${API_BASE_URL}${cleanUrl}`;
+    let cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    if (cleanUrl.startsWith('/api')) return `${API_BASE_URL}${cleanUrl}`;
+    return cleanUrl;
   };
 
-  // Create proper audio URL
   const getAudioUrl = (url) => {
     if (!url) return null;
-    
-    // If it's already a full URL, return as is
     if (url.startsWith('http')) return url;
-    
-    // Clean up the URL path
-    let cleanUrl = url;
-    // Keep '/api' prefix intact to match backend routes
-    if (!cleanUrl.startsWith('/')) {
-      cleanUrl = '/' + cleanUrl;
-    }
-    
-    return `${API_BASE_URL}${cleanUrl}`;
+    let cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    if (cleanUrl.startsWith('/api')) return `${API_BASE_URL}${cleanUrl}`;
+    return cleanUrl;
   };
 
   const finalVideoUrl = getVideoUrl(videoUrl);
   const finalAudioUrl = getAudioUrl(audioUrl);
+
+  const getShareUrl = () => {
+    if (!videoUrl) return null;
+    if (videoUrl.startsWith('http')) return videoUrl;
+    const path = videoUrl.startsWith('/') ? videoUrl : `/${videoUrl}`;
+    return `${window.location.origin}${path}`;
+  };
+
+  useEffect(() => {
+    const saved = JSON.parse(localStorage.getItem('savedSermons') || '[]');
+    const key = `${title}|${videoUrl || ''}`;
+    setIsSaved(saved.includes(key));
+  }, [title, videoUrl]);
+
+  const handleBookmark = () => {
+    const saved = JSON.parse(localStorage.getItem('savedSermons') || '[]');
+    const key = `${title}|${videoUrl || ''}`;
+    let next;
+    if (saved.includes(key)) {
+      next = saved.filter((k) => k !== key);
+      setIsSaved(false);
+    } else {
+      next = [...saved, key];
+      setIsSaved(true);
+    }
+    localStorage.setItem('savedSermons', JSON.stringify(next));
+  };
+
+  const handleDownload = () => {
+    const url = getShareUrl();
+    if (!url) return;
+    const a = document.createElement('a');
+    a.href = url;
+    const name = title ? title.replace(/\s+/g, '_') : 'sermon';
+    a.download = `${name}.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleShare = async () => {
+    const url = getShareUrl();
+    if (!url) return;
+    const text = title || 'Sermon video';
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: text, text, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        alert('Link copied to clipboard');
+      }
+    } catch (e) {}
+  };
 
   return (
     <div className="col-sm-12 col-md-6 col-lg-4 d-flex">
@@ -368,14 +402,14 @@ const SermonCard = ({ title, category, time, pastor, videoUrl, audioUrl, thumbna
           )}
           
           <div className="d-flex gap-3">
-            <button className="btn btn-link p-0 text-muted" title="Share">
+            <button className="btn btn-link p-0 text-muted" title="Share" onClick={handleShare}>
               <i className="bi bi-share"></i>
             </button>
-            <button className="btn btn-link p-0 text-muted" title="Download">
+            <button className="btn btn-link p-0 text-muted" title="Download" onClick={handleDownload}>
               <i className="bi bi-download"></i>
             </button>
-            <button className="btn btn-link p-0 text-muted" title="Bookmark">
-              <i className="bi bi-bookmark"></i>
+            <button className={`btn btn-link p-0 ${isSaved ? 'text-primary' : 'text-muted'}`} title="Bookmark" onClick={handleBookmark}>
+              <i className={`bi ${isSaved ? 'bi-bookmark-fill' : 'bi-bookmark'}`}></i>
             </button>
           </div>
         </div>
@@ -398,7 +432,7 @@ const Sermons = () => {
         setError(null);
         
         // Try to fetch videos from the backend using axios instance
-        const response = await axiosInstance.get('/api/upload/videos/list');
+        const response = await axiosInstance.get('/api/upload/videos/list', { requiresAuth: false });
         
         if (response.status === 200 && response.data) {
           const data = response.data;

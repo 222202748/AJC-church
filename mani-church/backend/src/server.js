@@ -172,6 +172,8 @@ const adminRoutes = require('./routes/admin');
 const blogRoutes = require('./routes/blog');
 const eventRegistrationRoutes = require('./routes/eventRegistrationRoutes');
 const uploadRoutes = require('./routes/upload');
+const eventRoutes = require('./routes/events');
+const contactRoutes = require('./routes/contact');
 
 // Ensure upload directories exist
 const ensureUploadDirs = () => {
@@ -198,6 +200,8 @@ app.use('/api/admin', adminRoutes.router);
 app.use('/api/blog', blogRoutes);
 app.use('/api/eventregistration', eventRegistrationRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Create donation (initial step)
 app.post('/api/donations', async (req, res) => {

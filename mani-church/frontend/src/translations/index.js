@@ -109,7 +109,22 @@ export const translations = {
       article3: {
         title: 'Building Community: The Importance Of Fellowship',
         description: 'Discover how building meaningful connections and fostering fellowship strengthens communities, creating a sense of belonging and support.'
-      }
+      },
+      viewAll: 'View All Articles',
+    },
+
+    // Testimonials Section
+    testimonials: {
+      title: 'Testimonials',
+      sarahName: 'Sarah Thomas',
+      sarahRole: 'Church Member',
+      sarahQuote: 'This church has been a blessing to my family. The community is welcoming and the sermons are inspiring.',
+      johnName: 'John Davis',
+      johnRole: 'Youth Group Leader',
+      johnQuote: 'I\'ve seen so many young lives transformed through our youth ministry. God is truly working in this place.',
+      maryName: 'Mary Johnson',
+      maryRole: 'Choir Member',
+      maryQuote: 'The worship experience here is amazing. I feel God\'s presence every time we gather together.',
     },
 
     // Contact Section
@@ -270,7 +285,22 @@ export const translations = {
       article3: {
         title: 'சமூக கட்டமைப்பு: ஐக்கியத்தின் முக்கியத்துவம்',
         description: 'அர்த்தமுள்ள தொடர்புகளை உருவாக்குவது மற்றும் ஐக்கியத்தை வளர்ப்பது எவ்வாறு சமூகங்களை வலுப்படுத்துகிறது, சொந்தம் மற்றும் ஆதரவின் உணர்வை உருவாக்குகிறது என்பதைக் கண்டறியவும்.'
-      }
+      },
+      viewAll: 'அனைத்து கட்டுரைகளையும் காண்க',
+    },
+
+    // Testimonials Section
+    testimonials: {
+      title: 'சான்றுகள்',
+      sarahName: 'சாரா தாமஸ்',
+      sarahRole: 'சபை உறுப்பினர்',
+      sarahQuote: 'இந்த தேவாலயம் என் குடும்பத்திற்கு ஒரு ஆசீர்வாதமாக உள்ளது. இங்குள்ள சமூகம் வரவேற்கத்தக்கது மற்றும் பிரசங்கங்கள் எழுச்சியூட்டுகின்றன.',
+      johnName: 'ஜான் டேவிஸ்',
+      johnRole: 'இளைஞர் குழு தலைவர்',
+      johnQuote: 'எங்கள் இளைஞர் ஊழியத்தின் மூலம் பல இளைஞர்களின் வாழ்க்கையில் மாற்றம் ஏற்படுவதை நான் பார்த்திருக்கிறேன். தேவன் உண்மையில் இந்த இடத்தில் செயல்படுகிறார்.',
+      maryName: 'மேரி ஜான்சன்',
+      maryRole: 'பாடகர் குழு உறுப்பினர்',
+      maryQuote: 'இங்குள்ள ஆராதனை அனுபவம் அற்புதமானது. நாம் ஒன்றாக கூடும் ஒவ்வொரு முறையும் நான் தேவனுடைய பிரசன்னத்தை உணர்கிறேன்.',
     },
 
     // Contact Section

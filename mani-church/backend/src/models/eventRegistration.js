@@ -9,7 +9,9 @@ const registrationSchema = new mongoose.Schema({
   registrationDate: Date,
   status: String,
   notes: String,
-  attendeeCount: Number
+  attendeeCount: Number,
+  confirmed: { type: Boolean, default: false },
+  attended: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model('Registration', registrationSchema);
